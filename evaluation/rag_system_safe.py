@@ -6,6 +6,7 @@ from django.conf import settings
 import PyPDF2
 from typing import List, Dict, Any
 from openai import OpenAI
+from .logger import log_success, log_error, log_info
 
 
 class DocumentProcessor:
@@ -22,7 +23,7 @@ class DocumentProcessor:
                     text += page.extract_text() + "\n"
                 return text.strip()
         except Exception as e:
-            print(f"Error extracting text from PDF: {e}")
+            log_error("PDF text extraction failed", exception=e, extra_data={"file_path": file_path})
             return ""
     
     @staticmethod
@@ -62,9 +63,8 @@ class SafeRAGSystem:
                 api_key=settings.OPENAI_API_KEY,
                 timeout=30.0
             )
-            print("✅ OpenAI client initialized successfully in RAG system")
         except Exception as e:
-            print(f"⚠️  OpenAI client initialization failed: {e}")
+            log_error("OpenAI client initialization failed in RAG system", exception=e)
             self.openai_client = None
         
         # Try to initialize ChromaDB
@@ -84,9 +84,9 @@ class SafeRAGSystem:
                 metadata={"hnsw:space": "cosine"}
             )
             self.use_chromadb = True
-            print("✅ ChromaDB initialized successfully")
+            log_success("ChromaDB initialized successfully in RAG system")
         except Exception as e:
-            print(f"⚠️  ChromaDB initialization failed: {e}. Using simple RAG system.")
+            log_error("ChromaDB initialization failed, using simple RAG system", exception=e)
             self.use_chromadb = False
             self._init_simple_system()
     
@@ -104,7 +104,8 @@ class SafeRAGSystem:
                 with open(self.documents_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
-                print(f"Error loading documents: {e}")
+                log_error("Error loading documents from file", exception=e, extra_data={"documents_file": self.documents_file})
+                pass
         return {}
     
     def _save_documents(self):
@@ -114,7 +115,8 @@ class SafeRAGSystem:
             with open(self.documents_file, 'w', encoding='utf-8') as f:
                 json.dump(self.documents, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            print(f"Error saving documents: {e}")
+            log_error("Error saving documents to file", exception=e, extra_data={"documents_file": self.documents_file})
+            pass
     
     def ingest_document(self, file_path: str, document_type: str, document_id: str):
         """Ingest a document into the storage system."""
@@ -125,6 +127,12 @@ class SafeRAGSystem:
         
         # Chunk the text
         chunks = self.processor.chunk_text(text)
+        log_info("Document processed for ingestion", extra_data={
+            "document_type": document_type,
+            "document_id": document_id,
+            "text_length": len(text),
+            "chunks_count": len(chunks)
+        })
         
         if self.use_chromadb:
             # Use ChromaDB
@@ -165,6 +173,13 @@ class SafeRAGSystem:
                 })
             
             self._save_documents()
+        
+        log_success("Document ingested successfully", extra_data={
+            "document_type": document_type,
+            "document_id": document_id,
+            "chunks_ingested": len(chunks),
+            "storage_type": "ChromaDB" if self.use_chromadb else "Simple file storage"
+        })
         
         return len(chunks)
     
@@ -222,7 +237,7 @@ class SafeRAGSystem:
     def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding for text using OpenAI."""
         if not self.openai_client:
-            print("OpenAI client not available")
+            log_error("OpenAI client not available for embedding generation")
             return []
         
         try:
@@ -232,5 +247,5 @@ class SafeRAGSystem:
             )
             return response.data[0].embedding
         except Exception as e:
-            print(f"Error generating embedding: {e}")
+            log_error("Error generating embedding", exception=e, extra_data={"text_length": len(text)})
             return []

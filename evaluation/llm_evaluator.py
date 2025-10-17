@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional
 from openai import OpenAI
 from django.conf import settings
 from .rag_system_safe import SafeRAGSystem
+from .logger import log_success, log_error, log_info
 
 
 class LLMEvaluator:
@@ -19,9 +20,8 @@ class LLMEvaluator:
                 api_key=settings.OPENAI_API_KEY,
                 timeout=30.0
             )
-            print("✅ OpenAI client initialized successfully")
         except Exception as e:
-            print(f"⚠️  OpenAI client initialization failed: {e}")
+            log_error("OpenAI client initialization failed in LLM evaluator", exception=e)
             self.openai_client = None
         self.rag_system = SafeRAGSystem()
     
@@ -29,7 +29,7 @@ class LLMEvaluator:
                            temperature: float = 0.1) -> Optional[str]:
         """Call OpenAI API with retry logic."""
         if not self.openai_client:
-            print("OpenAI client not available")
+            log_error("OpenAI client not available for LLM call")
             return None
             
         for attempt in range(max_retries):
@@ -42,7 +42,11 @@ class LLMEvaluator:
                 )
                 return response.choices[0].message.content
             except Exception as e:
-                print(f"LLM API call failed (attempt {attempt + 1}): {e}")
+                log_error("LLM API call failed", exception=e, extra_data={
+                    "attempt": attempt + 1,
+                    "max_retries": max_retries,
+                    "temperature": temperature
+                })
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)  # Exponential backoff
                 else:
@@ -107,9 +111,17 @@ Respond ONLY with valid JSON, no additional text.
             ])
             
             result = json.loads(response)
+            log_success("CV evaluation completed successfully", extra_data={
+                "job_title": job_title,
+                "cv_match_rate": result.get('cv_match_rate', 0),
+                "cv_text_length": len(cv_text)
+            })
             return result
         except Exception as e:
-            print(f"Error in CV evaluation: {e}")
+            log_error("CV evaluation failed", exception=e, extra_data={
+                "job_title": job_title,
+                "cv_text_length": len(cv_text)
+            })
             return {
                 "technical_skills_match": {"score": 1, "reasoning": "Evaluation failed"},
                 "experience_level": {"score": 1, "reasoning": "Evaluation failed"},
@@ -183,9 +195,15 @@ Respond ONLY with valid JSON, no additional text.
             ])
             
             result = json.loads(response)
+            log_success("Project evaluation completed successfully", extra_data={
+                "project_score": result.get('project_score', 0),
+                "project_text_length": len(project_text)
+            })
             return result
         except Exception as e:
-            print(f"Error in project evaluation: {e}")
+            log_error("Project evaluation failed", exception=e, extra_data={
+                "project_text_length": len(project_text)
+            })
             return {
                 "correctness": {"score": 1, "reasoning": "Evaluation failed"},
                 "code_quality": {"score": 1, "reasoning": "Evaluation failed"},
@@ -224,7 +242,16 @@ Focus on actionable insights, AI/LLM integration potential, and alignment with v
                 {"role": "system", "content": "You are an expert HR professional providing candidate assessments."},
                 {"role": "user", "content": summary_prompt}
             ])
+            log_success("Overall summary generated successfully", extra_data={
+                "job_title": job_title,
+                "cv_match_rate": cv_result.get('cv_match_rate', 0),
+                "project_score": project_result.get('project_score', 0)
+            })
             return response
         except Exception as e:
-            print(f"Error generating overall summary: {e}")
+            log_error("Overall summary generation failed", exception=e, extra_data={
+                "job_title": job_title,
+                "cv_match_rate": cv_result.get('cv_match_rate', 0),
+                "project_score": project_result.get('project_score', 0)
+            })
             return "Unable to generate overall summary due to technical error."

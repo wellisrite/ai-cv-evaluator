@@ -160,13 +160,11 @@ def ingest_system_documents():
                     "document_type": doc.document_type,
                     "chunks_ingested": chunks
                 })
-                print(f"Ingested {chunks} chunks from {doc.filename}")
             except Exception as e:
                 log_error("Error ingesting document", exception=e, extra_data={
                     "filename": doc.filename,
                     "document_type": doc.document_type
                 })
-                print(f"Error ingesting {doc.filename}: {e}")
         
         log_success("System documents ingestion completed", {
             "total_chunks": ingested_count,
@@ -177,7 +175,6 @@ def ingest_system_documents():
         
     except Exception as e:
         log_error("System documents ingestion failed", exception=e)
-        print(f"Error in document ingestion: {e}")
         raise e
 
 
@@ -218,5 +215,4 @@ def extract_text_from_document(document: Document) -> str:
             "filename": document.filename,
             "document_type": document.document_type
         })
-        print(f"Error extracting text from {document.filename}: {e}")
         return ""

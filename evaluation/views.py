@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.http import Http404
 from django.utils import timezone
 from .models import Document, EvaluationJob, EvaluationResult
 from .serializers import (
@@ -111,7 +112,6 @@ def evaluate_documents(request):
             })
             
             # Run evaluation synchronously (bypassing Celery for now)
-            print("Running evaluation synchronously...")
             try:
                 # Run evaluation directly without Celery
                 from .llm_evaluator import LLMEvaluator
@@ -135,21 +135,15 @@ def evaluate_documents(request):
                     raise ValueError("Could not extract text from documents")
                 
                 # Evaluate CV
-                print("Evaluating CV...")
                 cv_result = llm_evaluator.evaluate_cv(cv_text, job.job_title)
-                print(f"CV result: {cv_result}")
                 
                 # Evaluate Project Report
-                print("Evaluating project report...")
                 project_result = llm_evaluator.evaluate_project_report(project_text)
-                print(f"Project result: {project_result}")
                 
                 # Generate overall summary
-                print("Generating overall summary...")
                 overall_summary = llm_evaluator.generate_overall_summary(
                     cv_result, project_result, job.job_title
                 )
-                print(f"Overall summary: {overall_summary}")
                 
                 # Ensure we have valid results
                 if not overall_summary:
@@ -184,10 +178,8 @@ def evaluate_documents(request):
                     "processing_time": (job.completed_at - job.started_at).total_seconds() if job.started_at else None
                 })
                 
-                print("Evaluation completed successfully!")
                 
             except Exception as sync_error:
-                print(f"Synchronous evaluation failed: {sync_error}")
                 job.status = 'failed'
                 job.error_message = f"Evaluation failed: {str(sync_error)}"
                 job.save()
@@ -292,6 +284,9 @@ def get_evaluation_result(request, job_id):
                 'error': job.error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
+    except Http404:
+        # Let the 404 from get_object_or_404 propagate
+        raise
     except Exception as e:
         log_error("Failed to get evaluation result", exception=e, extra_data={
             "job_id": str(job_id)
