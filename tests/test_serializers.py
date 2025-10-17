@@ -5,21 +5,22 @@ import uuid
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from shared.models import Document
-from shared.test_utils import get_real_cv_file, get_real_project_file
+# Removed import from deleted shared.test_utils module
 from jobs.models import EvaluationJob
 from evaluation.models import EvaluationResult
 from evaluation.serializers import (
     DocumentSerializer, EvaluationJobSerializer, EvaluationResultSerializer,
     UploadSerializer, EvaluateSerializer
 )
+from .test_base import BaseTestCase
 
 
-class DocumentSerializerTest(TestCase):
+class DocumentSerializerTest(TestCase, BaseTestCase):
     """Test cases for Document serializer."""
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = get_real_cv_file()
+        self.test_file = self._create_cv_file()
         
     def test_document_serialization(self):
         """Test document serialization."""
@@ -50,12 +51,12 @@ class DocumentSerializerTest(TestCase):
         self.assertTrue(serializer.is_valid())
 
 
-class EvaluationJobSerializerTest(TestCase):
+class EvaluationJobSerializerTest(TestCase, BaseTestCase):
     """Test cases for EvaluationJob serializer."""
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = get_real_cv_file()
+        self.test_file = self._create_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',
@@ -99,12 +100,12 @@ class EvaluationJobSerializerTest(TestCase):
         self.assertTrue(serializer.is_valid())
 
 
-class EvaluationResultSerializerTest(TestCase):
+class EvaluationResultSerializerTest(TestCase, BaseTestCase):
     """Test cases for EvaluationResult serializer."""
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = get_real_cv_file()
+        self.test_file = self._create_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',
@@ -218,12 +219,12 @@ class UploadSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
 
 
-class EvaluateSerializerTest(TestCase):
+class EvaluateSerializerTest(TestCase, BaseTestCase):
     """Test cases for Evaluate serializer."""
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = get_real_cv_file()
+        self.test_file = self._create_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',

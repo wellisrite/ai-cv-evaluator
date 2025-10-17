@@ -35,10 +35,14 @@ def process_evaluation_job(self, job_id: str):
         rag_system = SafeRAGSystem()
         llm_evaluator = LLMEvaluator()
         
+        # Get document objects from IDs
+        cv_document = Document.objects.get(id=job.cv_document_id)
+        project_document = Document.objects.get(id=job.project_document_id)
+        
         # Extract text from documents
         log_info("Extracting text from documents", {"job_id": job_id})
-        cv_text = extract_text_from_document(job.cv_document)
-        project_text = extract_text_from_document(job.project_document)
+        cv_text = extract_text_from_document(cv_document)
+        project_text = extract_text_from_document(project_document)
         
         if not cv_text or not project_text:
             raise ValueError("Could not extract text from documents")
@@ -74,7 +78,7 @@ def process_evaluation_job(self, job_id: str):
         
         # Create evaluation result
         result = EvaluationResult.objects.create(
-            job=job,
+            job_id=job.id,
             cv_match_rate=cv_result.get('cv_match_rate', 0.0),
             cv_feedback=cv_result.get('cv_feedback', ''),
             project_score=project_result.get('project_score', 0.0),

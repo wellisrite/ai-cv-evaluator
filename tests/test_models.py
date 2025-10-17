@@ -5,17 +5,18 @@ import uuid
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from shared.models import Document
-from shared.test_utils import get_real_cv_file, get_real_project_file
+# Removed import from deleted shared.test_utils module
 from jobs.models import EvaluationJob
 from evaluation.models import EvaluationResult
+from .test_base import BaseTestCase
 
 
-class DocumentModelTest(TestCase):
+class DocumentModelTest(TestCase, BaseTestCase):
     """Test cases for Document model."""
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = get_real_cv_file()
+        self.test_file = self._create_cv_file()
         
     def test_document_creation(self):
         """Test document creation."""
@@ -63,13 +64,13 @@ class DocumentModelTest(TestCase):
         self.assertEqual(doc2.document_type, 'project_report')
 
 
-class EvaluationJobModelTest(TestCase):
+class EvaluationJobModelTest(TestCase, BaseTestCase):
     """Test cases for EvaluationJob model."""
     
     def setUp(self):
         """Set up test data."""
-        self.cv_file = get_real_cv_file()
-        self.project_file = get_real_project_file()
+        self.cv_file = self._create_cv_file()
+        self.project_file = self._create_project_file()
         self.cv_doc = Document.objects.create(
             file=self.cv_file,
             document_type='cv',
@@ -133,13 +134,13 @@ class EvaluationJobModelTest(TestCase):
         self.assertEqual(job.status, 'failed')
 
 
-class EvaluationResultModelTest(TestCase):
+class EvaluationResultModelTest(TestCase, BaseTestCase):
     """Test cases for EvaluationResult model."""
     
     def setUp(self):
         """Set up test data."""
-        self.cv_file = get_real_cv_file()
-        self.project_file = get_real_project_file()
+        self.cv_file = self._create_cv_file()
+        self.project_file = self._create_project_file()
         self.cv_doc = Document.objects.create(
             file=self.cv_file,
             document_type='cv',

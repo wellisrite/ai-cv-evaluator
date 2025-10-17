@@ -2,7 +2,7 @@
 URL configuration for cv_evaluator project.
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
@@ -36,7 +36,7 @@ urlpatterns = [
     # Admin interface
     path('admin/', admin.site.urls),
     
-    # Essential endpoints
+    # Essential endpoints - these should work
     path('api/upload/', upload_documents, name='upload_documents'),
     path('api/evaluate/', evaluate_documents, name='evaluate_documents'),
     path('api/result/<uuid:job_id>/', get_evaluation_result, name='get_evaluation_result'),

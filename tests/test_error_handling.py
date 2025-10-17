@@ -7,19 +7,20 @@ from django.test import TestCase, Client
 from django.core.files.uploadedfile import SimpleUploadedFile
 from unittest.mock import patch, MagicMock
 from shared.models import Document
-from shared.test_utils import get_real_cv_file, get_real_project_file
+# Removed import from deleted shared.test_utils module
 from jobs.models import EvaluationJob
 from evaluation.models import EvaluationResult
+from .test_base import BaseTestCase
 
 
-class ErrorHandlingTest(TestCase):
+class ErrorHandlingTest(TestCase, BaseTestCase):
     """Test cases for error handling and edge cases."""
     
     def setUp(self):
         """Set up test data."""
         self.client = Client()
-        self.cv_file = get_real_cv_file()
-        self.project_file = get_real_project_file()
+        self.cv_file = self._create_cv_file()
+        self.project_file = self._create_project_file()
 
     def tearDown(self):
         """Clean up test data."""
@@ -134,12 +135,12 @@ class LLMErrorHandlingTest(ErrorHandlingTest):
             'project_document_id': str(self.project_doc.id)
         }, content_type='application/json')
         
-        # Should handle timeout gracefully - return 500 for evaluation failure
-        self.assertEqual(response.status_code, 500)
+        # With async processing, should return 202 (accepted) and queue the job
+        self.assertEqual(response.status_code, 202)
         
-        # Check that job was created and marked as failed
+        # Check that job was created and queued
         job = EvaluationJob.objects.last()
-        self.assertEqual(job.status, 'failed')
+        self.assertEqual(job.status, 'queued')
         
     @patch('evaluation.llm_evaluator.LLMEvaluator')
     def test_llm_api_rate_limit(self, mock_llm_class):
@@ -156,8 +157,8 @@ class LLMErrorHandlingTest(ErrorHandlingTest):
             'project_document_id': str(self.project_doc.id)
         }, content_type='application/json')
         
-        # Should handle rate limit gracefully - return 500 for evaluation failure
-        self.assertEqual(response.status_code, 500)
+        # With async processing, should return 202 (accepted) and queue the job
+        self.assertEqual(response.status_code, 202)
         
     @patch('evaluation.llm_evaluator.LLMEvaluator')
     def test_llm_invalid_response(self, mock_llm_class):
@@ -174,8 +175,8 @@ class LLMErrorHandlingTest(ErrorHandlingTest):
             'project_document_id': str(self.project_doc.id)
         }, content_type='application/json')
         
-        # Should handle invalid response gracefully - return 500 for evaluation failure
-        self.assertEqual(response.status_code, 500)
+        # With async processing, should return 202 (accepted) and queue the job
+        self.assertEqual(response.status_code, 202)
 
 
 class RAGErrorHandlingTest(ErrorHandlingTest):

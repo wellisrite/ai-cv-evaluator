@@ -63,7 +63,12 @@ class Command(BaseCommand):
             }
         ]
         
+        # In Docker, the working directory is /app, so sample_documents is at /app/sample_documents
+        # In local development, it's relative to the project root
         base_dir = Path(__file__).resolve().parent.parent.parent.parent
+        if not (base_dir / 'sample_documents').exists():
+            # Try Docker path
+            base_dir = Path('/app')
         
         for doc_info in documents_to_ingest:
             file_path = base_dir / doc_info['path']
@@ -153,8 +158,9 @@ class Command(BaseCommand):
             )
             # Run ingestion synchronously as fallback
             try:
-                from .tasks import ingest_system_documents
-                result = ingest_system_documents()
+                # Import the function directly for synchronous execution
+                from evaluation.tasks import ingest_system_documents as sync_ingest
+                result = sync_ingest()
                 log_success("Synchronous document ingestion completed", {
                     "result": result
                 })

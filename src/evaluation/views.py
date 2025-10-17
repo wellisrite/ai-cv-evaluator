@@ -54,90 +54,32 @@ def evaluate_documents(request):
                 "project_document_id": str(job.project_document_id)
             })
             
-            # Run evaluation synchronously (bypassing Celery for now)
+            # Queue evaluation job with Celery for async processing
             try:
-                # Run evaluation directly without Celery
-                from .llm_evaluator import LLMEvaluator
-                from .rag_system_safe import SafeRAGSystem
-                from .tasks import extract_text_from_document
+                # Start the evaluation job asynchronously
+                from .tasks import process_evaluation_job
                 
-                # Update status to processing
-                job.status = 'processing'
-                job.started_at = timezone.now()
-                job.save()
+                # Queue the job
+                task = process_evaluation_job.delay(str(job.id))
                 
-                # Initialize systems
-                rag_system = SafeRAGSystem()
-                llm_evaluator = LLMEvaluator()
-                
-                # Get document objects from IDs
-                cv_document = Document.objects.get(id=job.cv_document_id)
-                project_document = Document.objects.get(id=job.project_document_id)
-                
-                # Extract text from documents
-                cv_text = extract_text_from_document(cv_document)
-                project_text = extract_text_from_document(project_document)
-                
-                if not cv_text or not project_text:
-                    raise ValueError("Could not extract text from documents")
-                
-                # Evaluate CV
-                cv_result = llm_evaluator.evaluate_cv(cv_text, job.job_title)
-                
-                # Evaluate Project Report
-                project_result = llm_evaluator.evaluate_project_report(project_text)
-                
-                # Generate overall summary
-                overall_summary = llm_evaluator.generate_overall_summary(
-                    cv_result, project_result, job.job_title
-                )
-                
-                # Ensure we have valid results
-                if not overall_summary:
-                    overall_summary = "Evaluation completed but summary generation failed."
-                if not cv_result:
-                    cv_result = {"cv_match_rate": 0.0, "cv_feedback": "CV evaluation failed"}
-                if not project_result:
-                    project_result = {"project_score": 0.0, "project_feedback": "Project evaluation failed"}
-                
-                # Create evaluation result
-                from .models import EvaluationResult
-                result = EvaluationResult.objects.create(
-                    job_id=job.id,
-                    cv_match_rate=cv_result.get('cv_match_rate', 0.0),
-                    cv_feedback=cv_result.get('cv_feedback', ''),
-                    project_score=project_result.get('project_score', 0.0),
-                    project_feedback=project_result.get('project_feedback', ''),
-                    overall_summary=overall_summary,
-                    cv_detailed_scores=cv_result,
-                    project_detailed_scores=project_result
-                )
-                
-                # Update job status
-                job.status = 'completed'
-                job.completed_at = timezone.now()
-                job.save()
-                
-                log_success("Evaluation completed successfully", {
+                log_info("Evaluation job queued with Celery", {
                     "job_id": str(job.id),
-                    "cv_match_rate": result.cv_match_rate,
-                    "project_score": result.project_score,
-                    "processing_time": (job.completed_at - job.started_at).total_seconds() if job.started_at else None
+                    "task_id": task.id,
+                    "job_title": job.job_title
                 })
                 
-                
-            except Exception as sync_error:
+            except Exception as celery_error:
                 job.status = 'failed'
-                job.error_message = f"Evaluation failed: {str(sync_error)}"
+                job.error_message = f"Failed to queue evaluation job: {str(celery_error)}"
                 job.save()
                 
-                log_error("Evaluation failed during processing", exception=sync_error, extra_data={
+                log_error("Failed to queue evaluation job", exception=celery_error, extra_data={
                     "job_id": str(job.id),
                     "job_title": job.job_title
                 })
                 
                 return Response({
-                    'error': f'Failed to start evaluation: {str(sync_error)}'
+                    'error': f'Failed to start evaluation: {str(celery_error)}'
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
             log_success("Evaluation job queued successfully", {"job_id": str(job.id)})

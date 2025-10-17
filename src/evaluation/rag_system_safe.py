@@ -27,6 +27,21 @@ class DocumentProcessor:
             return ""
     
     @staticmethod
+    def extract_text_from_file(file_path: str) -> str:
+        """Extract text from any supported file type."""
+        try:
+            if file_path.endswith('.pdf'):
+                return DocumentProcessor.extract_text_from_pdf(file_path)
+            else:
+                # Handle text files (md, txt, etc.)
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    text = file.read()
+                    return text.strip()
+        except Exception as e:
+            log_error("Text extraction failed", exception=e, extra_data={"file_path": file_path})
+            return ""
+    
+    @staticmethod
     def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
         """Split text into overlapping chunks."""
         if len(text) <= chunk_size:
@@ -120,8 +135,8 @@ class SafeRAGSystem:
     
     def ingest_document(self, file_path: str, document_type: str, document_id: str):
         """Ingest a document into the storage system."""
-        # Extract text from PDF
-        text = self.processor.extract_text_from_pdf(file_path)
+        # Extract text from file (PDF, MD, TXT, etc.)
+        text = self.processor.extract_text_from_file(file_path)
         if not text:
             raise ValueError(f"Could not extract text from {file_path}")
         

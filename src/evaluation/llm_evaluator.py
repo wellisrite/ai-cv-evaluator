@@ -99,10 +99,10 @@ Scoring Guidelines:
 - Relevant Achievements (20% weight): Impact of past work (scaling, performance, adoption, AI/LLM implementations)
 - Cultural Fit (15% weight): Communication, learning mindset, teamwork/leadership, "Manager of One" qualities
 
-IMPORTANT: Calculate cv_match_rate as weighted average: (technical_skills_match * 0.4 + experience_level * 0.25 + relevant_achievements * 0.2 + cultural_fit * 0.15) * 0.2
+IMPORTANT: Calculate cv_match_rate as weighted average: (technical_skills_match * 0.4 + experience_level * 0.25 + relevant_achievements * 0.2 + cultural_fit * 0.15) / 5
 
-Example: If scores are technical_skills_match=1, experience_level=2, relevant_achievements=1, cultural_fit=2:
-cv_match_rate = (1*0.4 + 2*0.25 + 1*0.2 + 2*0.15) * 0.2 = (0.4 + 0.5 + 0.2 + 0.3) * 0.2 = 1.4 * 0.2 = 0.28
+Example: If scores are technical_skills_match=4, experience_level=4, relevant_achievements=4, cultural_fit=3:
+cv_match_rate = (4*0.4 + 4*0.25 + 4*0.2 + 3*0.15) / 5 = (1.6 + 1.0 + 0.8 + 0.45) / 5 = 3.85 / 5 = 0.77
 
 Respond ONLY with valid JSON, no additional text.
 """
@@ -113,7 +113,24 @@ Respond ONLY with valid JSON, no additional text.
                 {"role": "user", "content": cv_evaluation_prompt}
             ])
             
+            # Log the raw LLM response
+            log_info("LLM CV Evaluation Response", {
+                "job_title": job_title,
+                "response_length": len(response),
+                "raw_response": response[:500] + "..." if len(response) > 500 else response
+            })
+            
             result = json.loads(response)
+            
+            # Log the parsed result
+            log_info("LLM CV Evaluation Parsed Result", {
+                "job_title": job_title,
+                "cv_match_rate": result.get('cv_match_rate', 'N/A'),
+                "technical_skills_score": result.get('cv_detailed_scores', {}).get('technical_skills_match', {}).get('score', 'N/A'),
+                "experience_level_score": result.get('cv_detailed_scores', {}).get('experience_level', {}).get('score', 'N/A'),
+                "relevant_achievements_score": result.get('cv_detailed_scores', {}).get('relevant_achievements', {}).get('score', 'N/A'),
+                "cultural_fit_score": result.get('cv_detailed_scores', {}).get('cultural_fit', {}).get('score', 'N/A')
+            })
             
             # Validate and recalculate cv_match_rate if needed
             if 'cv_detailed_scores' in result:
@@ -125,8 +142,18 @@ Respond ONLY with valid JSON, no additional text.
                     ach_score = detailed_scores['relevant_achievements'].get('score', 1)
                     cult_score = detailed_scores['cultural_fit'].get('score', 1)
                     
-                    # Calculate weighted average: (tech*0.4 + exp*0.25 + ach*0.2 + cult*0.15) * 0.2
-                    calculated_rate = (tech_score * 0.4 + exp_score * 0.25 + ach_score * 0.2 + cult_score * 0.15) * 0.2
+                    # Calculate weighted average: (tech*0.4 + exp*0.25 + ach*0.2 + cult*0.15) / 5
+                    calculated_rate = (tech_score * 0.4 + exp_score * 0.25 + ach_score * 0.2 + cult_score * 0.15) / 5
+                    
+                    # Log the calculation details
+                    log_info("CV Match Rate Calculation", {
+                        "technical_skills": tech_score,
+                        "experience_level": exp_score,
+                        "relevant_achievements": ach_score,
+                        "cultural_fit": cult_score,
+                        "calculated_rate": calculated_rate,
+                        "original_rate": result.get('cv_match_rate', 'N/A')
+                    })
                     
                     # Update the cv_match_rate in both places
                     result['cv_match_rate'] = calculated_rate
@@ -222,7 +249,23 @@ Respond ONLY with valid JSON, no additional text.
                 {"role": "user", "content": project_evaluation_prompt}
             ])
             
+            # Log the raw LLM response
+            log_info("LLM Project Evaluation Response", {
+                "response_length": len(response),
+                "raw_response": response[:500] + "..." if len(response) > 500 else response
+            })
+            
             result = json.loads(response)
+            
+            # Log the parsed result
+            log_info("LLM Project Evaluation Parsed Result", {
+                "project_score": result.get('project_score', 'N/A'),
+                "correctness_score": result.get('project_detailed_scores', {}).get('correctness', {}).get('score', 'N/A'),
+                "code_quality_score": result.get('project_detailed_scores', {}).get('code_quality', {}).get('score', 'N/A'),
+                "resilience_score": result.get('project_detailed_scores', {}).get('resilience', {}).get('score', 'N/A'),
+                "documentation_score": result.get('project_detailed_scores', {}).get('documentation', {}).get('score', 'N/A'),
+                "creativity_score": result.get('project_detailed_scores', {}).get('creativity', {}).get('score', 'N/A')
+            })
             log_success("Project evaluation completed successfully", extra_data={
                 "project_score": result.get('project_score', 0),
                 "project_text_length": len(project_text)
@@ -270,6 +313,14 @@ Focus on actionable insights, AI/LLM integration potential, and alignment with v
                 {"role": "system", "content": "You are an expert HR professional providing candidate assessments."},
                 {"role": "user", "content": summary_prompt}
             ])
+            
+            # Log the raw LLM response for overall summary
+            log_info("LLM Overall Summary Response", {
+                "job_title": job_title,
+                "response_length": len(response),
+                "raw_response": response[:500] + "..." if len(response) > 500 else response
+            })
+            
             log_success("Overall summary generated successfully", extra_data={
                 "job_title": job_title,
                 "cv_match_rate": cv_result.get('cv_match_rate', 0),
