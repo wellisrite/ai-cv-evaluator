@@ -259,3 +259,40 @@ class ScoringLogicTest(TestCase):
         
         project_score = 4*0.3 + 3*0.25 + 4*0.2 + 3*0.15 + 2*0.1
         self.assertAlmostEqual(project_score, 3.4, places=2)
+    
+    def test_cv_match_rate_bug_fix_validation(self):
+        """Test the specific bug fix for cv_match_rate calculation."""
+        # This test validates the fix for the bug where cv_match_rate was showing 0.9
+        # when individual scores were: tech=1, exp=2, ach=1, cult=2
+        
+        # Individual scores from the bug report
+        technical_skills_match = 1
+        experience_level = 2
+        relevant_achievements = 1
+        cultural_fit = 2
+        
+        # Calculate the correct cv_match_rate
+        # Formula: (tech*0.4 + exp*0.25 + ach*0.2 + cult*0.15) * 0.2
+        weighted_sum = (technical_skills_match * 0.4 + 
+                       experience_level * 0.25 + 
+                       relevant_achievements * 0.2 + 
+                       cultural_fit * 0.15)
+        
+        cv_match_rate = weighted_sum * 0.2
+        
+        # Expected calculation: (1*0.4 + 2*0.25 + 1*0.2 + 2*0.15) * 0.2
+        # = (0.4 + 0.5 + 0.2 + 0.3) * 0.2 = 1.4 * 0.2 = 0.28
+        expected_rate = 0.28
+        
+        self.assertAlmostEqual(cv_match_rate, expected_rate, places=2)
+        
+        # Verify this is NOT 0.9 (the incorrect value from the bug)
+        self.assertNotAlmostEqual(cv_match_rate, 0.9, places=1)
+        
+        # Verify the calculation step by step
+        self.assertAlmostEqual(technical_skills_match * 0.4, 0.4, places=2)
+        self.assertAlmostEqual(experience_level * 0.25, 0.5, places=2)
+        self.assertAlmostEqual(relevant_achievements * 0.2, 0.2, places=2)
+        self.assertAlmostEqual(cultural_fit * 0.15, 0.3, places=2)
+        self.assertAlmostEqual(weighted_sum, 1.4, places=2)
+        self.assertAlmostEqual(cv_match_rate, 0.28, places=2)

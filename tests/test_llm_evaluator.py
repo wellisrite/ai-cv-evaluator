@@ -212,3 +212,84 @@ class LLMEvaluatorTest(TestCase):
         
         self.assertAlmostEqual(expected_cv_rate, 0.72, places=2)
         self.assertAlmostEqual(expected_project_score, 3.4, places=2)
+    
+    @patch('evaluation.llm_evaluator.OpenAI')
+    def test_cv_match_rate_calculation_fix(self, mock_openai):
+        """Test CV match rate calculation fix for incorrect LLM response."""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        
+        # Mock LLM response with incorrect cv_match_rate (like the bug we found)
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = json.dumps({
+            "cv_detailed_scores": {
+                "technical_skills_match": {"score": 1, "reasoning": "No relevant skills"},
+                "experience_level": {"score": 2, "reasoning": "Limited experience"},
+                "relevant_achievements": {"score": 1, "reasoning": "No relevant achievements"},
+                "cultural_fit": {"score": 2, "reasoning": "Poor cultural fit"}
+            },
+            "cv_match_rate": 0.9,  # This is WRONG - should be 0.28
+            "cv_feedback": "Poor candidate overall"
+        })
+        mock_client.chat.completions.create.return_value = mock_response
+        
+        evaluator = LLMEvaluator()
+        result = evaluator.evaluate_cv("Test CV content", "Software Engineer")
+        
+        # Expected calculation: (1*0.4 + 2*0.25 + 1*0.2 + 2*0.15) * 0.2 = (0.4 + 0.5 + 0.2 + 0.3) * 0.2 = 1.4 * 0.2 = 0.28
+        expected_rate = 0.28
+        self.assertEqual(result['cv_match_rate'], expected_rate)
+        self.assertEqual(result['cv_detailed_scores']['cv_match_rate'], expected_rate)
+        
+        # Verify the detailed scores are preserved
+        self.assertEqual(result['cv_detailed_scores']['technical_skills_match']['score'], 1)
+        self.assertEqual(result['cv_detailed_scores']['experience_level']['score'], 2)
+        self.assertEqual(result['cv_detailed_scores']['relevant_achievements']['score'], 1)
+        self.assertEqual(result['cv_detailed_scores']['cultural_fit']['score'], 2)
+    
+    @patch('evaluation.llm_evaluator.OpenAI')
+    def test_cv_match_rate_edge_cases(self, mock_openai):
+        """Test CV match rate calculation with edge cases."""
+        mock_client = MagicMock()
+        mock_openai.return_value = mock_client
+        
+        test_cases = [
+            # Perfect scores: all 5s
+            {
+                "scores": {"tech": 5, "exp": 5, "ach": 5, "cult": 5},
+                "expected": (5*0.4 + 5*0.25 + 5*0.2 + 5*0.15) * 0.2  # = 5 * 0.2 = 1.0
+            },
+            # Worst scores: all 1s
+            {
+                "scores": {"tech": 1, "exp": 1, "ach": 1, "cult": 1},
+                "expected": (1*0.4 + 1*0.25 + 1*0.2 + 1*0.15) * 0.2  # = 1 * 0.2 = 0.2
+            },
+            # Mixed scores
+            {
+                "scores": {"tech": 3, "exp": 4, "ach": 2, "cult": 5},
+                "expected": (3*0.4 + 4*0.25 + 2*0.2 + 5*0.15) * 0.2  # = (1.2 + 1.0 + 0.4 + 0.75) * 0.2 = 3.35 * 0.2 = 0.67
+            }
+        ]
+        
+        for i, case in enumerate(test_cases):
+            with self.subTest(case=i):
+                mock_response = MagicMock()
+                mock_response.choices = [MagicMock()]
+                mock_response.choices[0].message.content = json.dumps({
+                    "cv_detailed_scores": {
+                        "technical_skills_match": {"score": case["scores"]["tech"], "reasoning": "Test"},
+                        "experience_level": {"score": case["scores"]["exp"], "reasoning": "Test"},
+                        "relevant_achievements": {"score": case["scores"]["ach"], "reasoning": "Test"},
+                        "cultural_fit": {"score": case["scores"]["cult"], "reasoning": "Test"}
+                    },
+                    "cv_match_rate": 0.5,  # Wrong value that should be corrected
+                    "cv_feedback": "Test feedback"
+                })
+                mock_client.chat.completions.create.return_value = mock_response
+                
+                evaluator = LLMEvaluator()
+                result = evaluator.evaluate_cv("Test CV content", "Software Engineer")
+                
+                self.assertAlmostEqual(result['cv_match_rate'], case["expected"], places=2)
+                self.assertAlmostEqual(result['cv_detailed_scores']['cv_match_rate'], case["expected"], places=2)

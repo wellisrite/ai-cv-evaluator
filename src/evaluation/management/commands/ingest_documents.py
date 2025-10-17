@@ -3,7 +3,7 @@ Django management command to ingest system documents into the vector database.
 """
 from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
-from evaluation.models import Document
+from shared.models import Document
 from evaluation.tasks import ingest_system_documents
 from evaluation.logger import log_success, log_error, log_info
 import os

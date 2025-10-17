@@ -2,7 +2,9 @@
 Serializers for the evaluation app.
 """
 from rest_framework import serializers
-from .models import Document, EvaluationJob, EvaluationResult
+from shared.models import Document
+from jobs.models import EvaluationJob
+from .models import EvaluationResult
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -10,18 +12,18 @@ class DocumentSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Document
-        fields = ['id', 'document_type', 'filename', 'file_size', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
+        fields = ['id', 'document_type', 'filename', 'file_size', 'created_at']
+        read_only_fields = ['id', 'created_at']
 
 
 class EvaluationJobSerializer(serializers.ModelSerializer):
     """Serializer for EvaluationJob model."""
-    cv_document = DocumentSerializer(read_only=True)
-    project_document = DocumentSerializer(read_only=True)
+    cv_document_id = serializers.UUIDField(read_only=True)
+    project_document_id = serializers.UUIDField(read_only=True)
     
     class Meta:
         model = EvaluationJob
-        fields = ['id', 'job_title', 'cv_document', 'project_document', 
+        fields = ['id', 'job_title', 'cv_document_id', 'project_document_id', 
                  'status', 'created_at', 'started_at', 'completed_at', 'error_message']
         read_only_fields = ['id', 'created_at', 'started_at', 'completed_at', 'error_message']
 
@@ -67,7 +69,7 @@ class EvaluateSerializer(serializers.Serializer):
     def validate_cv_document_id(self, value):
         """Validate CV document exists."""
         try:
-            from .models import Document
+            from shared.models import Document
             doc = Document.objects.get(id=value, document_type='cv')
             return value
         except Document.DoesNotExist:
@@ -76,7 +78,7 @@ class EvaluateSerializer(serializers.Serializer):
     def validate_project_document_id(self, value):
         """Validate project document exists."""
         try:
-            from .models import Document
+            from shared.models import Document
             doc = Document.objects.get(id=value, document_type='project_report')
             return value
         except Document.DoesNotExist:

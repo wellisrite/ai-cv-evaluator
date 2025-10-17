@@ -18,7 +18,7 @@ services:
     depends_on:
       - redis
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "cd src && python manage.py migrate &&
              python manage.py ingest_documents &&
              python manage.py runserver 0.0.0.0:8000"
 
@@ -31,7 +31,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       - redis
-    command: celery -A cv_evaluator worker --loglevel=info
+    command: sh -c "cd src && celery -A cv_evaluator worker --loglevel=info"
 
 volumes:
   redis_data:

@@ -20,7 +20,7 @@ COPY . .
 RUN mkdir -p media chroma_db staticfiles
 
 # Set environment variables
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 ENV DJANGO_SETTINGS_MODULE=cv_evaluator.settings
 
 # Expose port

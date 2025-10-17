@@ -4,7 +4,10 @@ Unit tests for serializers.
 import uuid
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
-from evaluation.models import Document, EvaluationJob, EvaluationResult
+from shared.models import Document
+from shared.test_utils import get_real_cv_file, get_real_project_file
+from jobs.models import EvaluationJob
+from evaluation.models import EvaluationResult
 from evaluation.serializers import (
     DocumentSerializer, EvaluationJobSerializer, EvaluationResultSerializer,
     UploadSerializer, EvaluateSerializer
@@ -16,11 +19,7 @@ class DocumentSerializerTest(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = SimpleUploadedFile(
-            "test.pdf", 
-            b"fake pdf content", 
-            content_type="application/pdf"
-        )
+        self.test_file = get_real_cv_file()
         
     def test_document_serialization(self):
         """Test document serialization."""
@@ -37,7 +36,7 @@ class DocumentSerializerTest(TestCase):
         self.assertEqual(data['id'], str(doc.id))
         self.assertEqual(data['document_type'], 'cv')
         self.assertEqual(data['filename'], 'test_cv.pdf')
-        self.assertIn('uploaded_at', data)
+        self.assertIn('created_at', data)
         
     def test_document_deserialization(self):
         """Test document deserialization."""
@@ -56,11 +55,7 @@ class EvaluationJobSerializerTest(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = SimpleUploadedFile(
-            "test.pdf", 
-            b"fake pdf content", 
-            content_type="application/pdf"
-        )
+        self.test_file = get_real_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',
@@ -87,8 +82,8 @@ class EvaluationJobSerializerTest(TestCase):
         
         self.assertEqual(data['id'], str(job.id))
         self.assertEqual(data['job_title'], 'Product Engineer (Backend)')
-        self.assertEqual(data['cv_document']['id'], str(self.cv_doc.id))
-        self.assertEqual(data['project_document']['id'], str(self.project_doc.id))
+        self.assertEqual(data['cv_document_id'], str(self.cv_doc.id))
+        self.assertEqual(data['project_document_id'], str(self.project_doc.id))
         self.assertEqual(data['status'], 'queued')
         self.assertIn('created_at', data)
         
@@ -109,11 +104,7 @@ class EvaluationResultSerializerTest(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = SimpleUploadedFile(
-            "test.pdf", 
-            b"fake pdf content", 
-            content_type="application/pdf"
-        )
+        self.test_file = get_real_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',
@@ -136,7 +127,7 @@ class EvaluationResultSerializerTest(TestCase):
     def test_evaluation_result_serialization(self):
         """Test evaluation result serialization."""
         result = EvaluationResult.objects.create(
-            job=self.job,
+            job_id=self.job.id,
             cv_match_rate=0.75,
             cv_feedback='Good candidate',
             project_score=4.2,
@@ -232,11 +223,7 @@ class EvaluateSerializerTest(TestCase):
     
     def setUp(self):
         """Set up test data."""
-        self.test_file = SimpleUploadedFile(
-            "test.pdf", 
-            b"fake pdf content", 
-            content_type="application/pdf"
-        )
+        self.test_file = get_real_cv_file()
         self.cv_doc = Document.objects.create(
             file=self.test_file,
             document_type='cv',

@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
@@ -30,6 +30,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    # Custom apps
+    'shared',
+    'users',
+    'jobs',
     'evaluation',
 ]
 
@@ -106,6 +110,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom User Model
+AUTH_USER_MODEL = 'users.User'
+
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -177,6 +184,21 @@ LOGGING = {
     },
     'loggers': {
         'django': {
+            'handlers': ['success_file', 'error_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'shared': {
+            'handlers': ['success_file', 'error_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'users': {
+            'handlers': ['success_file', 'error_file', 'console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'jobs': {
             'handlers': ['success_file', 'error_file', 'console'],
             'level': 'INFO',
             'propagate': True,

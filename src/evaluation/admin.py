@@ -1,11 +1,13 @@
 from django.contrib import admin
-from .models import Document, EvaluationJob, EvaluationResult
+from shared.models import Document
+from jobs.models import EvaluationJob
+from .models import EvaluationResult
 
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ['filename', 'document_type', 'file_size', 'uploaded_at']
-    list_filter = ['document_type', 'uploaded_at']
+    list_display = ['filename', 'document_type', 'file_size', 'created_at']
+    list_filter = ['document_type', 'created_at']
     search_fields = ['filename']
 
 
@@ -19,5 +21,5 @@ class EvaluationJobAdmin(admin.ModelAdmin):
 
 @admin.register(EvaluationResult)
 class EvaluationResultAdmin(admin.ModelAdmin):
-    list_display = ['job', 'cv_match_rate', 'project_score', 'created_at']
+    list_display = ['job_id', 'cv_match_rate', 'project_score', 'created_at']
     readonly_fields = ['created_at']

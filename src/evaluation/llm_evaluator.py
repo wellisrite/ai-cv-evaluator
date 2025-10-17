@@ -99,7 +99,10 @@ Scoring Guidelines:
 - Relevant Achievements (20% weight): Impact of past work (scaling, performance, adoption, AI/LLM implementations)
 - Cultural Fit (15% weight): Communication, learning mindset, teamwork/leadership, "Manager of One" qualities
 
-Calculate cv_match_rate as weighted average: (technical_skills_match * 0.4 + experience_level * 0.25 + relevant_achievements * 0.2 + cultural_fit * 0.15) / 5
+IMPORTANT: Calculate cv_match_rate as weighted average: (technical_skills_match * 0.4 + experience_level * 0.25 + relevant_achievements * 0.2 + cultural_fit * 0.15) * 0.2
+
+Example: If scores are technical_skills_match=1, experience_level=2, relevant_achievements=1, cultural_fit=2:
+cv_match_rate = (1*0.4 + 2*0.25 + 1*0.2 + 2*0.15) * 0.2 = (0.4 + 0.5 + 0.2 + 0.3) * 0.2 = 1.4 * 0.2 = 0.28
 
 Respond ONLY with valid JSON, no additional text.
 """
@@ -111,6 +114,31 @@ Respond ONLY with valid JSON, no additional text.
             ])
             
             result = json.loads(response)
+            
+            # Validate and recalculate cv_match_rate if needed
+            if 'cv_detailed_scores' in result:
+                detailed_scores = result['cv_detailed_scores']
+                if all(key in detailed_scores for key in ['technical_skills_match', 'experience_level', 'relevant_achievements', 'cultural_fit']):
+                    # Recalculate cv_match_rate to ensure accuracy
+                    tech_score = detailed_scores['technical_skills_match'].get('score', 1)
+                    exp_score = detailed_scores['experience_level'].get('score', 1)
+                    ach_score = detailed_scores['relevant_achievements'].get('score', 1)
+                    cult_score = detailed_scores['cultural_fit'].get('score', 1)
+                    
+                    # Calculate weighted average: (tech*0.4 + exp*0.25 + ach*0.2 + cult*0.15) * 0.2
+                    calculated_rate = (tech_score * 0.4 + exp_score * 0.25 + ach_score * 0.2 + cult_score * 0.15) * 0.2
+                    
+                    # Update the cv_match_rate in both places
+                    result['cv_match_rate'] = calculated_rate
+                    if 'cv_detailed_scores' in result:
+                        result['cv_detailed_scores']['cv_match_rate'] = calculated_rate
+                    
+                    log_info("CV match rate recalculated", extra_data={
+                        "original_rate": result.get('cv_match_rate', 0),
+                        "calculated_rate": calculated_rate,
+                        "scores": {"tech": tech_score, "exp": exp_score, "ach": ach_score, "cult": cult_score}
+                    })
+            
             log_success("CV evaluation completed successfully", extra_data={
                 "job_title": job_title,
                 "cv_match_rate": result.get('cv_match_rate', 0),

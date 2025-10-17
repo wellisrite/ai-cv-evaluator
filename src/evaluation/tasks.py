@@ -3,7 +3,9 @@ Celery tasks for async evaluation processing.
 """
 from celery import shared_task
 from django.utils import timezone
-from .models import EvaluationJob, EvaluationResult, Document
+from jobs.models import EvaluationJob
+from .models import EvaluationResult
+from shared.models import Document
 from .rag_system_safe import SafeRAGSystem
 from .llm_evaluator import LLMEvaluator
 from .logger import log_success, log_error, log_info
