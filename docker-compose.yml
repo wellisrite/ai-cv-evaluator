@@ -1,0 +1,38 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - media_files:/app/media
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py ingest_documents &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  celery:
+    build: .
+    volumes:
+      - .:/app
+      - media_files:/app/media
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: celery -A cv_evaluator worker --loglevel=info
+
+volumes:
+  redis_data:
+  media_files:
