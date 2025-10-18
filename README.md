@@ -36,7 +36,7 @@ A comprehensive Django-based system that leverages OpenAI's GPT models to evalua
 ## 📁 Project Structure
 
 ```
-rakamin/
+project/
 ├── src/                          # Django application source code
 │   ├── cv_evaluator/            # Main Django project
 │   │   ├── settings.py          # Django settings
@@ -100,7 +100,7 @@ rakamin/
 
 ```bash
 git clone <repository-url>
-cd rakamin
+cd project
 ```
 
 ### 2. Environment Setup
@@ -261,19 +261,19 @@ GET /api/jobs/
 ### Quick Reference
 ```bash
 # Most common testing commands (using direct docker exec - fastest approach)
-docker exec rakamin-web-1 python src/manage.py test --verbosity=2                    # All tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_models --verbosity=2   # Model tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_api_endpoints --verbosity=2  # API tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_serializers --verbosity=2    # Serializer tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_error_handling --verbosity=2 # Error handling tests
+docker exec cv-evaluator-web-1 python src/manage.py test --verbosity=2                    # All tests
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_models --verbosity=2   # Model tests
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_api_endpoints --verbosity=2  # API tests
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_serializers --verbosity=2    # Serializer tests
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_error_handling --verbosity=2 # Error handling tests
 ```
 
-> **💡 Tip**: Using `docker exec rakamin-web-1` is faster than `docker-compose exec web` because it directly executes commands in the running container without going through docker-compose's overhead.
+> **💡 Tip**: Using `docker exec cv-evaluator-web-1` is faster than `docker-compose exec web` because it directly executes commands in the running container without going through docker-compose's overhead.
 
 ### Run All Tests
 ```bash
 # Using Docker (recommended)
-docker exec rakamin-web-1 python src/manage.py test --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test --verbosity=2
 
 # Or using docker-compose
 docker-compose exec web python manage.py test --verbosity=2
@@ -286,36 +286,36 @@ python manage.py test --verbosity=2
 ### Run Specific Test Suites
 ```bash
 # API endpoint tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_api_endpoints --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_api_endpoints --verbosity=2
 
 # Model tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_models --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_models --verbosity=2
 
 # Serializer tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_serializers --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_serializers --verbosity=2
 
 # Error handling tests
-docker exec rakamin-web-1 python src/manage.py test tests.test_error_handling --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_error_handling --verbosity=2
 
 # Run specific test method
-docker exec rakamin-web-1 python src/manage.py test tests.test_serializers.EvaluateSerializerTest.test_evaluate_serializer_valid_data --verbosity=2
+docker exec cv-evaluator-web-1 python src/manage.py test tests.test_serializers.EvaluateSerializerTest.test_evaluate_serializer_valid_data --verbosity=2
 ```
 
 ### Run Tests with Coverage
 ```bash
 # Using Docker
-docker exec rakamin-web-1 bash -c "cd src && coverage run --source='.' manage.py test"
-docker exec rakamin-web-1 bash -c "cd src && coverage report"
-docker exec rakamin-web-1 bash -c "cd src && coverage html"  # Generate HTML report
+docker exec cv-evaluator-web-1 bash -c "cd src && coverage run --source='.' manage.py test"
+docker exec cv-evaluator-web-1 bash -c "cd src && coverage report"
+docker exec cv-evaluator-web-1 bash -c "cd src && coverage html"  # Generate HTML report
 
 # Copy coverage report to host
-docker cp rakamin-web-1:/app/src/htmlcov ./coverage-report
+docker cp cv-evaluator-web-1:/app/src/htmlcov ./coverage-report
 ```
 
 ### Test with pytest
 ```bash
 # Using Docker
-docker exec rakamin-web-1 bash -c "cd src && pytest tests/ -v"
+docker exec cv-evaluator-web-1 bash -c "cd src && pytest tests/ -v"
 
 # Or install pytest locally and run
 pip install pytest pytest-django
